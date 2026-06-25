@@ -11,11 +11,24 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const testRealtimeUpdates = async () => {
-  const uri = process.env.MONGODB_URI;
+  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/dishdb';
   console.log(`[TEST] Connecting to MongoDB: ${uri}`);
   
   // 1. Establish database connection
-  await mongoose.connect(uri);
+  try {
+    // Try to connect to configured URI with 2-second timeout
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 2000 });
+  } catch (error) {
+    console.warn(`⚠️ Connection to configured URI failed: ${error.message}`);
+    const fallbackUri = 'mongodb://127.0.0.1:27017/dishdb';
+    console.log(`🔄 Attempting fallback to: ${fallbackUri}...`);
+    try {
+      await mongoose.connect(fallbackUri, { serverSelectionTimeoutMS: 2000 });
+    } catch (fallbackError) {
+      console.error('❌ Both configured and fallback database connections failed.');
+      process.exit(1);
+    }
+  }
   
   // 2. Connect to Socket.IO Server
   const socket = io('http://localhost:5000');

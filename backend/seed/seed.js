@@ -16,8 +16,23 @@ const seedDatabase = async () => {
   console.log(`Connecting to: ${uri} for seeding...`);
 
   try {
-    await mongoose.connect(uri);
-    
+    // Try to connect to the configured URI with a 2-second timeout
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 2000 });
+  } catch (error) {
+    console.warn(`⚠️ Connection to configured URI failed: ${error.message}`);
+    const fallbackUri = 'mongodb://127.0.0.1:27017/dishdb';
+    console.log(`🔄 Attempting fallback to: ${fallbackUri}...`);
+    try {
+      await mongoose.connect(fallbackUri, { serverSelectionTimeoutMS: 2000 });
+    } catch (fallbackError) {
+      console.error('❌ Both configured and fallback database connections failed.');
+      console.error('Please ensure MongoDB is running. You can start it using:');
+      console.error('  mongod --dbpath <path_to_db_data> --port 27018 --replSet rs0');
+      process.exit(1);
+    }
+  }
+
+  try {
     // Read local seed dataset
     const seedFilePath = path.join(__dirname, 'dishes.json');
     const data = await fs.readFile(seedFilePath, 'utf8');

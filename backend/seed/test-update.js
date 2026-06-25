@@ -14,7 +14,21 @@ const testUpdate = async () => {
   console.log(`Connecting to database at ${uri}...`);
 
   try {
-    await mongoose.connect(uri);
+    // Try to connect to configured URI with 2-second timeout
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 2000 });
+  } catch (error) {
+    console.warn(`⚠️ Connection to configured URI failed: ${error.message}`);
+    const fallbackUri = 'mongodb://127.0.0.1:27017/dishdb';
+    console.log(`🔄 Attempting fallback to: ${fallbackUri}...`);
+    try {
+      await mongoose.connect(fallbackUri, { serverSelectionTimeoutMS: 2000 });
+    } catch (fallbackError) {
+      console.error('❌ Both configured and fallback database connections failed.');
+      process.exit(1);
+    }
+  }
+
+  try {
 
     // Find Alfredo Pasta (ID 5) and toggle its publication status directly in DB
     const item = await Dish.findOne({ dishId: '5' });
